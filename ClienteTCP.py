@@ -10,8 +10,8 @@ client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 #faz o cliente se conectar
 client.connect((target_host,target_port))
 
-mensagem = 'Connection done'
-msgByte = mensagem.encode()
+msg = 'Connection done'
+msgByte = msg.encode()
 
 #envia alguns dados
 client.send(msgByte)
@@ -19,4 +19,4 @@ client.send(msgByte)
 #recebe alguns dados
 response = client.recv(8096)
 
-print response
+print(response)
