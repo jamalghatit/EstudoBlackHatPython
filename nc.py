@@ -74,6 +74,18 @@ def client_sender(buffer):
         #encerra a conexão
         client.close()
 
+def server_loop():
+    global target
+
+    #se não houver nenhum alvo definido, ouviremos todas as interfaces
+    if not len(target):
+        target = '0.0.0.0'
+
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server.bind((target,port))
+        server.listen(5)
+
+    
 
 def main():
     global listen
