@@ -15,13 +15,14 @@ print("[*] Listening on %s: %d" % (bind_ip,bind_port))
 def handle_client(client_socket):
     #exibe o que o cliente enviar
     request = client_socket.recv(1024)
-    print('[*] Received: %s ' % request.decode())
+    resposta = request.decode()
+    print('[*] Received: %s ' % resposta)
 
-    mensagem = "ACK!!!"
+    mensagem = "ACK!"
     msgByte = mensagem.encode()
     #envia um pacote de volta
     client_socket.send(msgByte)
-
+   
     client_socket.close()
 
 
@@ -29,7 +30,6 @@ while True:
     client, addr = server.accept()
     print("[*] Accepted connection from %s:%d " % (addr[0],addr[1]))
     cliente_handler = threading.Thread(target=handle_client, args=(client,))
-    
     cliente_handler.start()
 
 

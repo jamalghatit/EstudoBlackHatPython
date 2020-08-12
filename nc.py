@@ -24,7 +24,7 @@ def run_command(command):
         output = 'Failed to execute command. \r\n '
     
     #envia os dados de saída de volta ao cliente
-    return output
+    return output.decode('ISO-8859-1')
 
 def client_handler(client_socket):
     global upload
@@ -46,11 +46,13 @@ def client_handler(client_socket):
             # receberemos tudo; em seguida, simplesmente abrimos um handle de arquivo e gravamos o 
             # conteúdo nesse arquivo
             data = client_socket.recv(1024)
+            dados = data.decode()
 
-            if not data:
+
+            if not dados:
                 break
             else:
-                file_buffer += data
+                file_buffer += dados
         # agora tentaremos gravar esses bytes
         try:
             # A flag wb garante que gravaremos o arquivo com o modo binário 
@@ -61,34 +63,45 @@ def client_handler(client_socket):
             file_descriptor.close()
 
             # confirma que gravamos o arquivo
-            client_socket.send("Successfully saved file to %s\r\n" % upload_destination)
+            msg = 'Successfully saved file to %s \r\n' % upload_destination
+            msgByte = msg.encode()
+            client_socket.send(msgByte)
 
         except:
-            client_socket.send("Failed to save file to %s\r\n" % upload_destination)
-      
+            msg = "Failed to save file to %s\r\n" % upload_destination
+            msgByte = msg.encode()
+            client_socket.send(msgByte)
     # verifica se é execução de comando
     if len(execute):
 
         # executa o comando
         output = run_command(execute)
-
-        client_socket.send(output)
+        saida = output.encode()
+        client_socket.send(saida)
 
     # entra em outro laço se um shell de comandos foi solicitado
     if command:
         while True:
             # mostra um prompt simples
-            client_socket.send("<BHP:#> ")
+            mensagem = "<BHP:#>"
+            msgByte = mensagem.encode()
+            client_socket.send(msgByte)
+            
             # agora ficamos recebendo dados até vermos um linefeed (tecla enter)
             cmd_buffer = ""
             while "\n" not in cmd_buffer:
-                cmd_buffer += client_socket.recv(1024)
+                cmd = client_socket.recv(1024)
+                cmdByte = cmd.decode()
+                cmd_buffer += cmdByte
                 # envia de volta a saída do comando
 
             #Nós Temos um comando válido, então execute-o e envie de volta os resultados
             response = run_command(cmd_buffer)
+            respostaString = str(response)
+            respostaByte = respostaString.encode()
             # envia de volta a resposta
-            client_socket.send(response)
+            client_socket.send(respostaByte)
+
         # ele continua a executar comandos à medida que os enviamos e a saída é mandada de volta. 
         # Você perceberá que o código procura um novo caractere de quebra de linha para determinar 
         # quando o comando deverá ser processado, o que o torna emelhante ao netcat. 
@@ -107,9 +120,11 @@ def server_loop():
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((target,port))
     server.listen(5)    
+    print("[*] Listening on %s: %d" % (target,port))
 
     while True:
         client_socket, addr = server.accept()
+        print("[*] Accepted connection from %s:%d " % (addr[0],addr[1]))
         #dispara uma thread para cuidar de nosso novo cliente
         client_thread = threading.Thread(target=client_handler, args=(client_socket, ))
         client_thread.start()
@@ -122,23 +137,24 @@ def client_sender(buffer):
     try:
         #conecta-se ao nosso host-alvo
         client.connect((target,port))
+        print(f'Conexão {target} na porta {port}')
         
         # teste para verificar se recebeu algum dado de entrada de stdin, se tudo ocorrer bem, enviaremos
         # os dados ao alvo remoto e receberemos o dado de volta (#2) até não haver mais dados para receber.
         if len(buffer):
-            client.send(buffer)
+            bufferByte = buffer.encode()
+            client.send(bufferByte)
         
         while True:
-            
             #agora espera receber dados de volta
             recv_len = 1
             response = ''
 
             while recv_len: #2
-
                 data = client.recv(4096)
-                recv_len = len(data)
-                response+=data
+                dados = data.decode()
+                recv_len = len(dados)
+                response+=dados
 
                 if recv_len < 4096:
                     break
@@ -148,9 +164,10 @@ def client_sender(buffer):
             #espera mais dados de entrada
             buffer = input()
             buffer += "\n"
+            bufferByte = buffer.encode()
 
             # envia dados
-            client.send(buffer)
+            client.send(bufferByte)
     except:
         
         print("[*] Exception! Exiting.")
@@ -195,8 +212,9 @@ def main():
     # lê as opções de linha de comando
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hle:t:p:cu", ['help','listen','execute','target', \
-            'port','command','upload'])                      
+        opts, args = getopt.getopt(sys.argv[1:], "hle:t:p:cu:", ['help','listen','execute','target', \
+            'port','command','upload'])  
+        print(f'args = {args}')               
     except getopt.GetoptError as err:
         print(str(err))
         usage()                       
@@ -206,27 +224,35 @@ def main():
             usage()
         elif o in ('-l', '--listen'):
             listen = True
+            print(f'listen = {listen}')  
         elif o in ('-e', '--execute'):
             execute = a
+            print(f'execute = {execute}')  
         elif o in ('-c', '--commandshell'):
             command = True
+            print(f'command = {command}')
         elif o in ("-u", "--upload"):
             upload_destination = a
+            print(f'upload = {upload}')
         elif o in ("-t", "--target"):
             target = a
+            print(f'target = {target}')
         elif o in ("-p", "--port"):
             port = int(a)
+            print(f'porta = {port}')
+            
         else:
             assert False,"Unhandled Option"
 
     # iremos ouvir ou simplesmente enviar dados de stdin?
     if not listen and len(target) and port > 0:
         #Tenta-se imitar o netcat para ler dados de stdin e enviá-los pela rede. 
+        print(f'Conexão {target} na porta {port}')
 
         # lê o buffer da linha de comando
         # isso causará um bloqueio, portanto envie um CTRL-D se não estiver
         # enviando dados de entrada para stdin
-        buffer = sys.stdin.read()
+        buffer = input()
         # send data off
         client_sender(buffer)
         
