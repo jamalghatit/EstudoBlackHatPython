@@ -5,7 +5,6 @@ import threading
 import subprocess
 
 #define algumas variáveis globais
-
 listen                = False
 command               = False
 upload                = False
@@ -14,22 +13,107 @@ target                = ''
 upload_destination    = ''
 port                  = 0
 
-def usage():
-    print("NetCat em Python")
-    print()
-    print("Usage: nc.py -t target_host -p port")
-    print("-l --listen                  - liste on [host]:[port] for incoming connections")
-    print("-e --execute=file_to_run     - execute the given file upon receiving a connection")
-    print('-c --command                 -initialize a command shell')
-    print('-u --upload=destination      - upon receiving connection upload a file and write to [destination]')
-    print()
-    print()
-    print('Examples: ')
-    print('nc.py -t 192.168.0.1 -p 5555 -l -c')
-    print('nc.py -t 192.168.0.1 -p 5555 -l -u=c:\\target.exe')
-    print('nc.py -t 192.168.0.1 -p 5555 -l -e=\"cat /etc/passwd\"')
-    print('echo "ABCDEFGI" | ./nc.py -t 192.168.11.12 -p 135')
-    sys.exit(0)
+def run_command(command):
+    #remove a quebra de linha
+    command = command.rstrip()
+
+    #executa o comando e obtém os dados de saída
+    try:
+        output = subprocess.check_output(command, stderr=subprocess.STDOUT, shell=True)
+    except:
+        output = 'Failed to execute command. \r\n '
+    
+    #envia os dados de saída de volta ao cliente
+    return output
+
+def client_handler(client_socket):
+    global upload
+    global execute
+    global command
+
+    #verifica se é upload
+    if len(upload_destination): # 1
+
+       # 1 determinar se nossa ferramenta de rede está configurada para receber um arquivo 
+       # quando uma conexão for estabelecida
+
+        #lê todos os bytes e grava em nosso destino
+        file_buffer=""
+
+        #permanece lendo os dados até que não haja mais nenhum disponível
+        while True: #2
+            #Inicialmente, recebemos os dados do arquivo em um laço #2 para garantir que 
+            # receberemos tudo; em seguida, simplesmente abrimos um handle de arquivo e gravamos o 
+            # conteúdo nesse arquivo
+            data = client_socket.recv(1024)
+
+            if not data:
+                break
+            else:
+                file_buffer += data
+        # agora tentaremos gravar esses bytes
+        try:
+            # A flag wb garante que gravaremos o arquivo com o modo binário 
+            # habilitado, o que garante o sucesso da carga e da gravação de um arquivo binário
+            # executável.
+            file_descriptor = open(upload_destination,"wb")
+            file_descriptor.write(file_buffer)
+            file_descriptor.close()
+
+            # confirma que gravamos o arquivo
+            client_socket.send("Successfully saved file to %s\r\n" % upload_destination)
+
+        except:
+            client_socket.send("Failed to save file to %s\r\n" % upload_destination)
+      
+    # verifica se é execução de comando
+    if len(execute):
+
+        # executa o comando
+        output = run_command(execute)
+
+        client_socket.send(output)
+
+    # entra em outro laço se um shell de comandos foi solicitado
+    if command:
+        while True:
+            # mostra um prompt simples
+            client_socket.send("<BHP:#> ")
+            # agora ficamos recebendo dados até vermos um linefeed (tecla enter)
+            cmd_buffer = ""
+            while "\n" not in cmd_buffer:
+                cmd_buffer += client_socket.recv(1024)
+                # envia de volta a saída do comando
+
+            #Nós Temos um comando válido, então execute-o e envie de volta os resultados
+            response = run_command(cmd_buffer)
+            # envia de volta a resposta
+            client_socket.send(response)
+        # ele continua a executar comandos à medida que os enviamos e a saída é mandada de volta. 
+        # Você perceberá que o código procura um novo caractere de quebra de linha para determinar 
+        # quando o comando deverá ser processado, o que o torna emelhante ao netcat. 
+        # Entretanto, se você estiver criando um cliente Python para conversar com esse código, 
+        # lembre-se de adicionar o caractere de quebra de linha.
+
+# isto é para conexões de entrada
+def server_loop():
+    global target
+    global port
+
+    #se não houver nenhum alvo definido, ouviremos todas as interfaces
+    if not len(target):
+        target = '0.0.0.0'
+
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind((target,port))
+    server.listen(5)    
+
+    while True:
+        client_socket, addr = server.accept()
+        #dispara uma thread para cuidar de nosso novo cliente
+        client_thread = threading.Thread(target=client_handler, args=(client_socket, ))
+        client_thread.start()
+
 
 def client_sender(buffer):
     
@@ -74,18 +158,22 @@ def client_sender(buffer):
         #encerra a conexão
         client.close()
 
-def server_loop():
-    global target
-
-    #se não houver nenhum alvo definido, ouviremos todas as interfaces
-    if not len(target):
-        target = '0.0.0.0'
-
-        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server.bind((target,port))
-        server.listen(5)
-
-    
+def usage():
+    print("NetCat em Python")
+    print()
+    print("Usage: nc.py -t target_host -p port")
+    print("-l --listen                  - listen on [host]:[port] for incoming connections")
+    print("-e --execute=file_to_run     - execute the given file upon receiving a connection")
+    print('-c --command                 - initialize a command shell')
+    print('-u --upload=destination      - upon receiving connection upload a file and write to [destination]')
+    print()
+    print()
+    print('Examples: ')
+    print('nc.py -t 192.168.0.1 -p 5555 -l -c')
+    print('nc.py -t 192.168.0.1 -p 5555 -l -u=c:\\target.exe')
+    print('nc.py -t 192.168.0.1 -p 5555 -l -e=\"cat /etc/passwd\"')
+    print('echo "ABCDEFGI" | ./nc.py -t 192.168.11.12 -p 135')
+    sys.exit(0)
 
 def main():
     global listen
@@ -147,3 +235,5 @@ def main():
         # de acordo com as opções de linha de comando anteriores
     if listen:
         server_loop() 
+
+main()
