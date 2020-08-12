@@ -1,3 +1,5 @@
+# Script adaptado para python 3.8 do bhnet.py (BlackHat Python)
+
 import sys
 import socket
 import getopt
@@ -23,8 +25,14 @@ def run_command(command):
     except:
         output = 'Failed to execute command. \r\n '
     
-    #envia os dados de saída de volta ao cliente
-    return output.decode('ISO-8859-1')
+    #envia os dados de saída de volta ao cliente.
+    # Se for windows, decodificar a saída para 'ISO-8859-1', pois se deixar no UTF-8, 
+    # o retorno será todo bagunçado.
+    try:
+        return output.decode('ISO-8859-1')
+    except:
+        output = 'Failed to execute command. \r\n '
+        return output
 
 def client_handler(client_socket):
     global upload
