@@ -61,13 +61,15 @@ def proxy_handler(client_socket, remote_host, remote_port, receive_first):
     remote_socket.connect((remote_host, remote_port))
     
     #recebe dados do lado remoto, se for necessário
-    if receive_first:
+    if receive_first: #1 Faz-se uma verificação para garantir que não precisaremos iniciar uma conexão com o lado remoto e solicitar dados antes de entrar no laço principal
+                         #Alguns daemos servidores esperam que voce faça isso previamente ( servidores FTP normalmente enviam um banner antes, por exemplo).
         
-        remote_buffer = receive_from(remote_socket)
-        hexdump(remote_buffer)
+        remote_buffer = receive_from(remote_socket) #2 Essa simplesmente recebe um objeto socket conectado e realiza uma recepção dos dados
+        hexdump(remote_buffer) #3 Faz-se um dump do conteúdo do pacote para inspecioná-lo e ver se há algo interessante
         
         #envia os dados ao nosso handler de resposta
-        remote_buffer = response_handler(remote_buffer)
+        remote_buffer = response_handler(remote_buffer) #4 aqui voce poderá modificar o conteúdo do pacote, realizar tarefas de fuzzing, testar aspectos relacioados à autenticação
+                                                           # ou o que desejar. 
         
         #se houver dados para serem enviados ao nosso cliente local, envia-os
         if len(remote_buffer):
@@ -84,7 +86,45 @@ def proxy_handler(client_socket, remote_host, remote_port, receive_first):
         
         if len(local_buffer):
             
-            print
+            print("[==>] Received %d bytes from localhost. " % len(local_buffer))
+            hexdump(local_buffer)
+            
+            #envia os dados para nosso handler de solicitações
+            local_buffer = request_handler(local_buffer)
+            
+            # envia os dados ao host remoto
+            remote_socket.send(local_buffer)
+            print("[==>] Sent to remote")
+            
+        # recebe a resposta
+        remote_buffer = receive_from(remote_socket)
+        
+        if len(remote_buffer):
+            
+            print("[<==] Received %d bytes from remote." % len(remote_buffer))
+            hexdump(remote_buffer)
+            
+            #envia dados ao nosso handler de resposta
+            remote_buffer = response_handler(remote_buffer)
+            
+            #envia a resposta para o socket local
+            client_socket.send(remote_buffer)
+            
+            print("[<==] Sent to localhost.")
+            
+        # Se não houver mais dados em nenhum dos lados, encerra as conexões
+        
+        if not len(local_buffer) or not len(remote_buffer): #5
+            client_socket.close()
+            remote_socket.close()
+            print("[<==] No more data. Closing connections.")
+            
+            break
+def hexdump(src, length=16):
+    result = []
+    digits = 4 if isinstance(src, unicode) else 2  
+    # isinstance = passar como primeiro parametro a variavel que deseja validar e como segundo parâmetro o "tipo"
     
-    
+      
+   
 main()
