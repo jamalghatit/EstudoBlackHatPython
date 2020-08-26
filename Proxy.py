@@ -122,6 +122,8 @@ def proxy_handler(client_socket, remote_host, remote_port, receive_first):
             break
 
 def hexdump(src, length=16):
+    #1 - função de dumping de valores hexa que simplesmente exibirá os detalhes dos pacotes mostrando tanto os valores hexadecimais quanto os caracteres
+    # ASCII que possam ser exibidos.
     result = []
     digits = 4 if isinstance(src, str) else 2  
     # isinstance = passar como primeiro parametro a variavel que deseja validar e como segundo parâmetro o "tipo"
@@ -146,6 +148,7 @@ def hexdump(src, length=16):
         # Exemplo: 'x '.join(['a','b','c']) -> resultado =  'ax/ bx/ c'
     
 def receive_from(connection):
+    #2 - é utilizada tanto para receber dados locais quanto remotos e simplesmente lhe passamos o objeto socket a ser usado. 
     buffer = ''
     
     #definimos um timeout de 2s; de acordo com seu alvo, pode ser que esse valor price ser ajustado
@@ -162,6 +165,19 @@ def receive_from(connection):
              # sintaticamente que se preencha uma lacuna, como é o caso da definição de uma função: 
              # após a linha do def tem que haver algum conteúdo.
     
-    
-   
+    return buffer
+
+# modifica qualquer solicitação destinada ao host remoto
+def request_handler(buffer):
+    # faz as modificações no pacote
+    #3 - essa função permite modificar qualuqer tráfego destinado a qualuqer lado do proxy.
+    return buffer
+
+
+# modifica qualquer resposta destinada ao host local
+def response_handler(buffer):
+    #faz modificações no pacote
+    #4 - 
+    return buffer
+
 main()
