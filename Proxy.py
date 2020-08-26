@@ -149,6 +149,6 @@ def receive_from(connection):
     buffer = ''
     
     #definimos um timeout de 2s; de acordo com seu alvo, pode ser que esse valor price ser ajustado
-    connection.settimeout(2)    
+    connection.settimeout(2)    #Define um tempo limite no bloqueio de operações de soquete.
    
 main()
