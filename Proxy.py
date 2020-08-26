@@ -150,5 +150,18 @@ def receive_from(connection):
     
     #definimos um timeout de 2s; de acordo com seu alvo, pode ser que esse valor price ser ajustado
     connection.settimeout(2)    #Define um tempo limite no bloqueio de operações de soquete.
+    try:
+        # continua lendo em buffer até que não haja mais dados ou a temporização expire
+        while True:
+            data = connection.recv(4096)
+            if not data:
+                break # quebra o laço while
+            buffer +=data
+    except:
+        pass # O pass é uma palavra que deve ser usada sempre que o programa requisitar 
+             # sintaticamente que se preencha uma lacuna, como é o caso da definição de uma função: 
+             # após a linha do def tem que haver algum conteúdo.
+    
+    
    
 main()
