@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 import sys
 import socket
 import threading
@@ -19,7 +20,7 @@ def server_loop(local_host, local_port, remote_host, remote_port, receive_first)
     while True:
         client_socket, addr = server.accept()
         
-        #exibe informações sobre a conexão local
+        # exibe informações sobre a conexão local
         
         print("[==>] Received incoming connection from %s:%d" % (addr[0], addr[1]))
         
@@ -137,11 +138,10 @@ def hexdump(src, length=16):
         hexa = b' '.join(["%0*X" % (digits, ord(x)) for x in s])
         #  '%*.*f' % (5, 2, 122.71827878) ->  122.72
         text = b''.join([x if 0x20 <= ord(x) < 0x7F else b'.' for x in s])
-        result.append(b'%04X %-*s %s' % (i, length*(digit+1), hexa, text))
+        result.append(b'%04X %-*s %s' % (i, length*(digits+1), hexa, text))
         # '%-10s texto' % ('test') ->    test       texto
         # %04X ->  número em hexadecimal com 4 casas
-        
-    print(b'\n '.joint(result))
+        print(b'\n '.join(result))
         
         # str.join() é um método de a str, e intercala essa string entre os argumentos fornecidos.
         # Portanto, quando você executa some_separator.join([a, b, c]), obtém, de fato a + some_separator + b + some_separator + c
