@@ -14,4 +14,4 @@ def ssh_command(ip, user, passwd, command): #1 função que estabelece uma conex
     return 
 
 
-ssh_command('192.168.80.128','kali', 'kali', 'id')
+ssh_command('ip','usuario', 'senha', 'comando')
