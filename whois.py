@@ -1,6 +1,5 @@
 """
 Ferramenta em Python do utilitário WHOIS
-apenas para domínio .br
 
 Ainda em implementação.
 """
